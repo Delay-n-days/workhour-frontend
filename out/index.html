@@ -451,7 +451,7 @@
   // ============================================================
   // 双模式 API 适配层（Tauri IPC + HTTP API）
   // ============================================================
-  function isTauri() {
+  function checkIsTauri() {
     return typeof window !== 'undefined' && ('__TAURI_INTERNALS__' in window || '__TAURI__' in window);
   }
   async function tauriInvoke(cmd, args) {
@@ -472,23 +472,23 @@
     return await res.json();
   }
   async function apiValidateEteamsid(eteamsid) {
-    if (isTauri()) return tauriInvoke('validate_eteamsid', { eteamsid });
+    if (checkIsTauri()) return tauriInvoke('validate_eteamsid', { eteamsid });
     return httpPost('/api/validate-eteamsid', { eteamsid });
   }
   async function apiGetProjects() {
-    if (isTauri()) return tauriInvoke('get_projects');
+    if (checkIsTauri()) return tauriInvoke('get_projects');
     return httpGet('/api/projects');
   }
   async function apiGetWorkTypes() {
-    if (isTauri()) return tauriInvoke('get_work_types');
+    if (checkIsTauri()) return tauriInvoke('get_work_types');
     return httpGet('/api/work-types');
   }
   async function apiGetTimeSlots() {
-    if (isTauri()) return tauriInvoke('get_time_slots');
+    if (checkIsTauri()) return tauriInvoke('get_time_slots');
     return httpGet('/api/time-slots');
   }
   async function apiSubmitWorkhour(data) {
-    if (isTauri()) return tauriInvoke('submit_workhour', data);
+    if (checkIsTauri()) return tauriInvoke('submit_workhour', data);
     return httpPost('/api/submit-workhour', data);
   }
 
