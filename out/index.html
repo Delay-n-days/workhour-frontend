@@ -228,10 +228,11 @@
             <span class="text-xs text-slate-600">从浏览器 DevTools → Network → Headers 复制</span>
           </div>
 
-          <div class="flex gap-3">
+          <div class="flex gap-3 items-center">
+            <label class="text-sm text-slate-400 whitespace-nowrap">eteamsid:</label>
             <input
               v-model="eteamsid"
-              type="text"
+              type="password"
               placeholder="请输入 eteamsid (格式: THIRDSSO_xxxx-xxxx)"
               class="flex-1 font-mono text-sm"
               @keydown.enter="validateEteamsidHandler"
