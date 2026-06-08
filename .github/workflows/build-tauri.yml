@@ -29,9 +29,6 @@ jobs:
         with:
           workspaces: ./src-tauri -> target
 
-      - name: Install frontend dependencies
-        run: bun install
-
       - name: Install Tauri CLI
         run: bun add -g @tauri-apps/cli
 
