@@ -700,7 +700,7 @@ impl EworkhourClient {
             });
         }
 
-        info!("[API] 工时提交成功!");
+        info!("[API] 工时提交成功!"); 
         Ok(SubmitResponse {
             success: true,
             message: "工时填报成功".to_string(),
