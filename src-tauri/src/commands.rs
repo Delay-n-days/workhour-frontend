@@ -28,13 +28,13 @@ pub async fn validate_eteamsid(eteamsid: String) -> Result<serde_json::Value, St
     }))
 }
 
-/// 获取项目列表（静态）
+/// 获取项目列表（动态）
 #[tauri::command]
-pub async fn get_projects() -> Result<serde_json::Value, String> {
-    eprintln!("[CMD] get_projects");
+pub async fn get_projects(eteamsid: String) -> Result<serde_json::Value, String> {
+    eprintln!("[CMD] get_projects: eteamsid='{}'", eteamsid);
 
     let client = EworkhourClient::new();
-    let result = client.get_projects()
+    let result = client.get_projects(&eteamsid)
         .await
         .map_err(|e| {
             let msg = format!("获取项目列表失败: {}", e);
@@ -46,13 +46,13 @@ pub async fn get_projects() -> Result<serde_json::Value, String> {
     Ok(result)
 }
 
-/// 获取工作类型列表（静态）
+/// 获取工作类型列表（动态）
 #[tauri::command]
-pub async fn get_work_types() -> Result<serde_json::Value, String> {
-    eprintln!("[CMD] get_work_types");
+pub async fn get_work_types(eteamsid: String) -> Result<serde_json::Value, String> {
+    eprintln!("[CMD] get_work_types: eteamsid='{}'", eteamsid);
 
     let client = EworkhourClient::new();
-    let result = client.get_work_types()
+    let result = client.get_work_types(&eteamsid)
         .await
         .map_err(|e| {
             let msg = format!("获取工作类型失败: {}", e);

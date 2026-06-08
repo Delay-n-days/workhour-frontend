@@ -3,6 +3,14 @@ use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
 use std::collections::HashMap;
 
+// 流程 / 表单固定 ID
+const WORKFLOW_ID: &str = "1215170926745124864";
+const NODE_ID: &str = "1215170926745124866";
+const FORM_ID: &str = "1215162010367852547";
+const FORM_LAYOUT_ID: &str = "1215162010367852618";
+const CUS_MENU_ID: &str = "1192823941250891835";
+const FIELD_WORK_TYPE: &str = "1249973841324212226";
+
 /// 工时系统 API 客户端
 pub struct EworkhourClient {
     client: Client,
@@ -133,22 +141,236 @@ impl EworkhourClient {
         })
     }
 
-    /// 获取项目列表（静态）
-    pub async fn get_projects(&self) -> Result<Value, reqwest::Error> {
-        Ok(json!({
-            "projects": [
+    /// 获取项目列表（动态）
+    pub async fn get_projects(&self, eteamsid: &str) -> Result<Value, reqwest::Error> {
+        let body = json!({
+            "browserMultiple": false,
+            "ebBrowserParams": {
+                "openScroll": true,
+                "variableDataKeyMap": {},
+                "businessId": WORKFLOW_ID,
+                "browserModule": "ebuilder",
+                "formParam": json!({
+                    "formId": FORM_ID,
+                    "layoutId": FORM_LAYOUT_ID,
+                    "fieldId": "1215162323950796801",
+                    "filterItems": [],
+                    "module": "ebuildercard",
+                    "dataDetails": []
+                }),
+                "controlId": "1215162323950796801",
+                "variableMap": {},
+                "browserFullRoute": "ebuilder/form",
+                "customParam": {
+                    "permissionType": 1,
+                    "requestId": "",
+                    "workflowId": WORKFLOW_ID,
+                    "nodeId": NODE_ID,
+                    "authSignatureStr": "",
+                    "authStr": "",
+                    "readOnly": false,
+                    "identityId": "",
+                    "identityType": 0,
+                    "isTest": false,
+                    "create": true,
+                    "mobile": false,
+                    "formId": FORM_ID,
+                    "source": "view",
+                    "printConfig": {},
+                    "bridgeService": "ebuilder",
+                    "isAgent": false,
+                    "beAgentId": "0",
+                    "hideSysFieldArea": true,
+                    "viewFormNodeId": NODE_ID,
+                    "turnTodoUser": [],
+                    "sysFieldNewMode": true,
+                },
+                "cusMenuId": CUS_MENU_ID,
+                "browserType": "ebuilder",
+                "browserMultiple": false,
+                "browserTabConfigList": [],
+                "compId": "fdc5b9be6c3b4fab8d2c113323ba7654",
+                "isMobile": false,
+                "browserRoute": "ebuilder/form",
+                "browserMethod": "prop",
+                "urlPageTitle": "5a6e6ZmF5bel5pe2",
+            },
+            "pageSize": 100,
+            "current": 1,
+            "formParam": json!({
+                "formId": FORM_ID,
+                "layoutId": FORM_LAYOUT_ID,
+                "fieldId": "1215162323950796801",
+                "filterItems": [],
+                "module": "ebuildercard",
+                "dataDetails": []
+            }),
+            "openScroll": true,
+            "controlId": "1215162323950796801",
+            "businessId": WORKFLOW_ID,
+            "variableMap": {},
+            "customParam": {
+                "permissionType": 1,
+                "requestId": "",
+                "workflowId": WORKFLOW_ID,
+                "nodeId": NODE_ID,
+                "authSignatureStr": "",
+                "authStr": "",
+                "readOnly": false,
+                "identityId": "",
+                "identityType": 0,
+                "isTest": false,
+                "create": true,
+                "mobile": false,
+                "formId": FORM_ID,
+                "source": "view",
+                "printConfig": {},
+                "bridgeService": "ebuilder",
+                "isAgent": false,
+                "beAgentId": "0",
+                "hideSysFieldArea": true,
+                "viewFormNodeId": NODE_ID,
+                "turnTodoUser": [],
+                "sysFieldNewMode": true,
+            },
+        });
 
-            ]
-        }))
+        let data = self.make_request("POST", "/api/ebuilder/form/common/browser/data/ebuilder", &body, eteamsid).await?;
+
+        if data.get("status") == Some(&Value::Bool(false)) {
+            return Ok(json!({"projects": [], "source": "static", "error": data.get("msg")}));
+        }
+
+        let projects = data.get("data")
+            .and_then(|d| d.get("data"))
+            .and_then(|d| d.as_array())
+            .map(|arr| {
+                arr.iter().map(|p| {
+                    json!({
+                        "id": p.get("id"),
+                        "name": p.get("content").or(p.get("name")).and_then(|v| v.as_str()).unwrap_or("")
+                    })
+                }).collect::<Vec<_>>()
+            })
+            .unwrap_or_default();
+
+        Ok(json!({"projects": projects, "source": "server"}))
     }
 
-    /// 获取工作类型列表（静态）
-    pub async fn get_work_types(&self) -> Result<Value, reqwest::Error> {
-        Ok(json!({
-            "work_types": [
+    /// 获取工作类型列表（动态）
+    pub async fn get_work_types(&self, eteamsid: &str) -> Result<Value, reqwest::Error> {
+        let body = json!({
+            "browserMultiple": true,
+            "ebBrowserParams": {
+                "openScroll": true,
+                "variableDataKeyMap": {},
+                "businessId": WORKFLOW_ID,
+                "browserModule": "ebuilder",
+                "formParam": json!({
+                    "formId": FORM_ID,
+                    "layoutId": FORM_LAYOUT_ID,
+                    "fieldId": FIELD_WORK_TYPE,
+                    "filterItems": [],
+                    "module": "ebuildercard",
+                    "dataDetails": []
+                }),
+                "controlId": FIELD_WORK_TYPE,
+                "variableMap": {},
+                "browserFullRoute": "ebuilder/form",
+                "customParam": {
+                    "permissionType": 1,
+                    "requestId": "",
+                    "workflowId": WORKFLOW_ID,
+                    "nodeId": NODE_ID,
+                    "authSignatureStr": "",
+                    "authStr": "",
+                    "readOnly": false,
+                    "identityId": "",
+                    "identityType": 0,
+                    "isTest": false,
+                    "create": true,
+                    "mobile": false,
+                    "formId": FORM_ID,
+                    "source": "view",
+                    "printConfig": {},
+                    "bridgeService": "ebuilder",
+                    "isAgent": false,
+                    "beAgentId": "0",
+                    "hideSysFieldArea": true,
+                    "viewFormNodeId": NODE_ID,
+                    "turnTodoUser": [],
+                    "sysFieldNewMode": true,
+                },
+                "cusMenuId": CUS_MENU_ID,
+                "browserType": "ebuilder",
+                "browserMultiple": true,
+                "browserTabConfigList": [],
+                "compId": "fdc5b9be6c3b4fab8d2c113323ba7654",
+                "isMobile": false,
+                "browserRoute": "ebuilder/form",
+                "browserMethod": "prop",
+                "urlPageTitle": "5a6e6ZmF5bel5pe2",
+            },
+            "pageSize": 50,
+            "current": 1,
+            "formParam": json!({
+                "formId": FORM_ID,
+                "layoutId": FORM_LAYOUT_ID,
+                "fieldId": FIELD_WORK_TYPE,
+                "filterItems": [],
+                "module": "ebuildercard",
+                "dataDetails": []
+            }),
+            "openScroll": true,
+            "controlId": FIELD_WORK_TYPE,
+            "businessId": WORKFLOW_ID,
+            "variableMap": {},
+            "customParam": {
+                "permissionType": 1,
+                "requestId": "",
+                "workflowId": WORKFLOW_ID,
+                "nodeId": NODE_ID,
+                "authSignatureStr": "",
+                "authStr": "",
+                "readOnly": false,
+                "identityId": "",
+                "identityType": 0,
+                "isTest": false,
+                "create": true,
+                "mobile": false,
+                "formId": FORM_ID,
+                "source": "view",
+                "printConfig": {},
+                "bridgeService": "ebuilder",
+                "isAgent": false,
+                "beAgentId": "0",
+                "hideSysFieldArea": true,
+                "viewFormNodeId": NODE_ID,
+                "turnTodoUser": [],
+                "sysFieldNewMode": true,
+            },
+        });
 
-            ]
-        }))
+        let data = self.make_request("POST", "/api/ebuilder/form/common/browser/data/ebuilder", &body, eteamsid).await?;
+
+        if data.get("status") == Some(&Value::Bool(false)) {
+            return Ok(json!({"work_types": [], "source": "static", "error": data.get("msg")}));
+        }
+
+        let work_types = data.get("data")
+            .and_then(|d| d.get("data"))
+            .and_then(|d| d.as_array())
+            .map(|arr| {
+                arr.iter().map(|wt| {
+                    json!({
+                        "id": wt.get("id"),
+                        "name": wt.get("content")
+                    })
+                }).collect::<Vec<_>>()
+            })
+            .unwrap_or_default();
+
+        Ok(json!({"work_types": work_types, "source": "server"}))
     }
 
     /// 获取时间段列表
