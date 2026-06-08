@@ -34,7 +34,7 @@ pub struct ValidateResponse {
 /// 工时条目
 #[derive(Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
-pub struct WorkHourEntry {
+pub struct WorkHourEntry { 
     pub time_slot_id: String,
     pub project_id: String,
     pub project_name: String,
