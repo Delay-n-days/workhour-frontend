@@ -14,6 +14,14 @@ fn main() {
             commands::get_time_slots,
             commands::submit_workhour,
         ])
+        .setup(|app| {
+            #[cfg(debug_assertions)]
+            {
+                let window = app.get_webview_window("main").unwrap();
+                window.open_devtools();
+            }
+            Ok(())
+        })
         .run(tauri::generate_context!())
         .expect("启动 Tauri 应用失败");
 }
