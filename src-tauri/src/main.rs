@@ -1,4 +1,5 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
+#![recursion_limit = "256"]
 //! 工时填报系统 - Tauri 主入口
 
 mod commands;
