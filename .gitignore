@@ -1,0 +1,10 @@
+node_modules/
+.next/
+out/
+*.tar.gz
+
+# Tauri
+src-tauri/target/
+src-tauri/WixTools/
+src-tauri/Frameworks/
+src-tauri/gen/
