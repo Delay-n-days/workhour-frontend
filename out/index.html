@@ -419,7 +419,7 @@
     </div>
 
     <!-- 右侧：日志区域 -->
-    <div class="w-80 border-l border-slate-800 bg-slate-900/50 flex flex-col shrink-0">
+    <div class="w-80 border-l border-slate-800 bg-slate-900/50 flex flex-col shrink-0 hidden lg:flex">
       <div class="p-4 border-b border-slate-800">
         <h2 class="text-sm font-semibold text-slate-300 flex items-center gap-2">
           <svg class="w-4 h-4 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -475,12 +475,12 @@
     if (checkIsTauri()) return tauriInvoke('validate_eteamsid', { eteamsid });
     return httpPost('/api/validate-eteamsid', { eteamsid });
   }
-  async function apiGetProjects() {
-    if (checkIsTauri()) return tauriInvoke('get_projects');
+  async function apiGetProjects(eteamsid) {
+    if (checkIsTauri()) return tauriInvoke('get_projects', { eteamsid });
     return httpGet('/api/projects');
   }
-  async function apiGetWorkTypes() {
-    if (checkIsTauri()) return tauriInvoke('get_work_types');
+  async function apiGetWorkTypes(eteamsid) {
+    if (checkIsTauri()) return tauriInvoke('get_work_types', { eteamsid });
     return httpGet('/api/work-types');
   }
   async function apiGetTimeSlots() {
@@ -588,18 +588,12 @@
         });
       }, 100);
 
-      // 加载数据列表
+      // 加载时间段列表（不需要 eteamsid）
       try {
-        const [projectsData, workTypesData, timeSlotsData] = await Promise.all([
-          apiGetProjects(),
-          apiGetWorkTypes(),
-          apiGetTimeSlots(),
-        ]);
-        projects.value = projectsData.projects;
-        workTypes.value = workTypesData.work_types;
+        const timeSlotsData = await apiGetTimeSlots();
         timeSlots.value = timeSlotsData.time_slots;
       } catch (e) {
-        console.error('加载数据失败:', e);
+        console.error('加载时间段失败:', e);
       }
 
       // 从 localStorage 加载表单数据
@@ -673,10 +667,15 @@
     }
 
     async function refreshDataFromServer() {
+      if (!eteamsid.value) {
+        addLog('eteamsid 未设置，跳过刷新', 'warning');
+        return;
+      }
+
       // 从服务器获取项目列表
       try {
         addLog('正在从服务器获取项目列表...');
-        const projectsData = await apiGetProjects();
+        const projectsData = await apiGetProjects(eteamsid.value);
         if (projectsData.projects && projectsData.projects.length > 0) {
           projects.value = projectsData.projects;
           addLog(`项目列表已更新: ${projects.value.length} 个项目`, 'success');
@@ -689,7 +688,7 @@
       // 从服务器获取工作类型列表
       try {
         addLog('正在从服务器获取工作类型列表...');
-        const workTypesData = await apiGetWorkTypes();
+        const workTypesData = await apiGetWorkTypes(eteamsid.value);
         if (workTypesData.work_types && workTypesData.work_types.length > 0) {
           workTypes.value = workTypesData.work_types;
           addLog(`工作类型列表已更新: ${workTypes.value.length} 个类型`, 'success');
