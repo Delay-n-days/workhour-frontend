@@ -23,7 +23,7 @@ fn main() {
                 .level(log::LevelFilter::Info)  // 日志级别: Error, Warn, Info, Debug, Trace
                 .max_file_size(5_000_000)       // 单个日志文件最大 5MB
                 .rotation_strategy(tauri_plugin_log::RotationStrategy::KeepAll)  // 保留所有日志文件
-                .timezone_strategy(tauri_plugin_log::TimestampStrategy::UseLocal)  // 使用本地时间
+                .timezone_strategy(tauri_plugin_log::TimezoneStrategy::UseLocal)  // 使用本地时间
                 .build()
         )
         .invoke_handler(tauri::generate_handler![
