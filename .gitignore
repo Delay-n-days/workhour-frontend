@@ -1,6 +1,5 @@
 node_modules/
 .next/
-out/
 *.tar.gz
 
 # Tauri

@@ -1,0 +1,878 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>工时填报系统</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
+  <style>
+    * { box-sizing: border-box; }
+    html, body { height: 100%; margin: 0; padding: 0; overflow: hidden; }
+    body { font-family: 'Inter', system-ui, sans-serif; background: #0f172a; color: #e2e8f0; }
+    #app { height: 100%; }
+    ::-webkit-scrollbar { width: 8px; height: 8px; }
+    ::-webkit-scrollbar-track { background: #1e293b; }
+    ::-webkit-scrollbar-thumb { background: #475569; border-radius: 4px; }
+    ::-webkit-scrollbar-thumb:hover { background: #64748b; }
+    .fade-in { animation: fadeIn 0.2s ease; }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
+    .slide-in { animation: slideIn 0.3s ease; }
+    @keyframes slideIn { from { opacity: 0; transform: translateX(-10px); } to { opacity: 1; transform: translateX(0); } }
+    .pulse { animation: pulse 2s infinite; }
+    @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
+    select, input {
+      background: #1e293b;
+      border: 1px solid #334155;
+      color: #e2e8f0;
+      border-radius: 6px;
+      padding: 8px 12px;
+      font-size: 14px;
+      transition: border-color 0.2s;
+    }
+    select:focus, input:focus {
+      outline: none;
+      border-color: #3b82f6;
+    }
+    select option {
+      background: #1e293b;
+      color: #e2e8f0;
+    }
+    /* 日期输入框样式 */
+    input[type="date"] {
+      color-scheme: dark;
+    }
+    .btn-primary {
+      background: linear-gradient(135deg, #3b82f6, #2563eb);
+      color: white;
+      padding: 10px 24px;
+      border-radius: 8px;
+      font-weight: 500;
+      transition: all 0.2s;
+      border: none;
+      cursor: pointer;
+    }
+    .btn-primary:hover:not(:disabled) {
+      transform: translateY(-1px);
+      box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4);
+    }
+    .btn-primary:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+    .btn-danger {
+      background: linear-gradient(135deg, #ef4444, #dc2626);
+      color: white;
+      padding: 8px 16px;
+      border-radius: 6px;
+      font-size: 13px;
+      transition: all 0.2s;
+      border: none;
+      cursor: pointer;
+    }
+    .btn-danger:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 4px 12px rgba(239, 68, 68, 0.4);
+    }
+    .card {
+      background: #1e293b;
+      border: 1px solid #334155;
+      border-radius: 12px;
+      padding: 20px;
+    }
+    .status-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 12px;
+      border-radius: 20px;
+      font-size: 12px;
+      font-weight: 500;
+    }
+    .status-valid {
+      background: rgba(34, 197, 94, 0.15);
+      color: #22c55e;
+      border: 1px solid rgba(34, 197, 94, 0.3);
+    }
+    .status-invalid {
+      background: rgba(239, 68, 68, 0.15);
+      color: #ef4444;
+      border: 1px solid rgba(239, 68, 68, 0.3);
+    }
+    .log-item {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 12px;
+      padding: 6px 10px;
+      border-radius: 4px;
+      margin-bottom: 4px;
+    }
+    .log-info { background: rgba(59, 130, 246, 0.1); color: #60a5fa; }
+    .log-success { background: rgba(34, 197, 94, 0.1); color: #22c55e; }
+    .log-error { background: rgba(239, 68, 68, 0.1); color: #ef4444; }
+    /* Notification 样式 */
+    .notification {
+      position: fixed;
+      top: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 1000;
+      min-width: 300px;
+      max-width: 500px;
+      padding: 12px 20px;
+      border-radius: 8px;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+      animation: slideDown 0.3s ease;
+    }
+    @keyframes slideDown {
+      from { opacity: 0; transform: translate(-50%, -20px); }
+      to { opacity: 1; transform: translate(-50%, 0); }
+    }
+    .notification-success {
+      background: linear-gradient(135deg, #059669, #047857);
+      border: 1px solid #10b981;
+      color: white;
+    }
+    .notification-error {
+      background: linear-gradient(135deg, #dc2626, #b91c1c);
+      border: 1px solid #ef4444;
+      color: white;
+    }
+    .notification-info {
+      background: linear-gradient(135deg, #2563eb, #1d4ed8);
+      border: 1px solid #3b82f6;
+      color: white;
+    }
+    .notification-warning {
+      background: linear-gradient(135deg, #d97706, #b45309);
+      border: 1px solid #f59e0b;
+      color: white;
+    }
+  </style>
+</head>
+<body class="h-screen overflow-hidden">
+
+<div id="app" class="h-full flex flex-col">
+
+  <!-- Notification 组件 -->
+  <div
+    v-if="notification.show"
+    class="notification"
+    :class="'notification-' + notification.type"
+  >
+    <div class="flex items-center gap-3">
+      <!-- 成功图标 -->
+      <svg v-if="notification.type === 'success'" class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+      </svg>
+      <!-- 错误图标 -->
+      <svg v-else-if="notification.type === 'error'" class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+      </svg>
+      <!-- 信息图标 -->
+      <svg v-else-if="notification.type === 'info'" class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+      </svg>
+      <!-- 警告图标 -->
+      <svg v-else class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
+      </svg>
+      <span class="text-sm font-medium">{{ notification.message }}</span>
+    </div>
+  </div>
+
+  <!-- 顶栏 -->
+  <header class="border-b border-slate-800 px-6 py-4 flex items-center justify-between shrink-0">
+    <div class="flex items-center gap-3">
+      <div class="w-10 h-10 rounded-lg bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center shadow-lg shadow-blue-500/20">
+        <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+        </svg>
+      </div>
+      <div>
+        <h1 class="text-lg font-bold text-white">工时填报系统</h1>
+        <p class="text-xs text-slate-500">快速填报每日工时</p>
+      </div>
+    </div>
+
+    <div class="flex items-center gap-4">
+      <!-- eteamsid 状态 -->
+      <div v-if="eteamsidValid" class="status-badge status-valid">
+        <span class="w-2 h-2 rounded-full bg-green-500 pulse"></span>
+        <span>{{ employeeName || '已验证' }}</span>
+      </div>
+      <div v-else-if="eteamsid" class="status-badge status-invalid">
+        <span class="w-2 h-2 rounded-full bg-red-500"></span>
+        <span>未验证</span>
+      </div>
+    </div>
+  </header>
+
+  <!-- 主内容：左右分栏 -->
+  <main class="flex-1 flex overflow-hidden">
+
+    <!-- 左侧：填报区域 -->
+    <div class="flex-1 flex flex-col min-w-0">
+      <!-- 可滚动的内容区域 -->
+      <div class="flex-1 overflow-y-auto p-6 pb-4">
+        <div class="space-y-6">
+
+        <!-- eteamsid 配置 -->
+        <div class="card fade-in">
+          <div class="flex items-center justify-between mb-4">
+            <h2 class="text-sm font-semibold text-slate-300 flex items-center gap-2">
+              <svg class="w-4 h-4 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z"/>
+              </svg>
+              认证配置
+            </h2>
+            <span class="text-xs text-slate-600">从浏览器 DevTools → Network → Headers 复制</span>
+          </div>
+
+          <div class="flex gap-3">
+            <input
+              v-model="eteamsid"
+              type="text"
+              placeholder="请输入 eteamsid (格式: THIRDSSO_xxxx-xxxx)"
+              class="flex-1 font-mono text-sm"
+              @keydown.enter="validateEteamsidHandler"
+            />
+            <button
+              @click="validateEteamsidHandler"
+              :disabled="!eteamsid || validating"
+              class="btn-primary"
+            >
+              <span v-if="validating">验证中...</span>
+              <span v-else>验证</span>
+            </button>
+          </div>
+
+          <p v-if="eteamsidError" class="mt-2 text-sm text-red-400">{{ eteamsidError }}</p>
+        </div>
+
+        <!-- 填报表单 -->
+        <div v-if="eteamsidValid" class="card fade-in">
+          <div class="flex items-center justify-between mb-4">
+            <h2 class="text-sm font-semibold text-slate-300 flex items-center gap-2">
+              <svg class="w-4 h-4 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+              </svg>
+              填报信息
+            </h2>
+          </div>
+
+          <!-- 日期选择 -->
+          <div class="flex items-center gap-4 mb-4">
+            <div class="flex items-center gap-2">
+              <label class="text-sm text-slate-400">填报日期:</label>
+              <input v-model="workDate" type="date" class="w-40" />
+            </div>
+            <div class="flex gap-2">
+              <button @click="setToday" class="text-xs px-3 py-1.5 rounded border border-slate-700 text-slate-400 hover:border-slate-500 hover:text-slate-300 transition-colors">
+                今天
+              </button>
+              <button @click="setYesterday" class="text-xs px-3 py-1.5 rounded border border-slate-700 text-slate-400 hover:border-slate-500 hover:text-slate-300 transition-colors">
+                昨天
+              </button>
+              <button @click="setLastWorkday" class="text-xs px-3 py-1.5 rounded border border-slate-700 text-slate-400 hover:border-slate-500 hover:text-slate-300 transition-colors">
+                上一个工作日
+              </button>
+            </div>
+          </div>
+
+          <!-- 批量设置 -->
+          <div class="flex items-center gap-4 mb-4 p-3 bg-slate-800/50 rounded-lg border border-slate-700">
+            <span class="text-xs text-slate-500">批量设置:</span>
+            <div class="flex items-center gap-2">
+              <label class="text-xs text-slate-500">项目:</label>
+              <select v-model="batchProjectId" class="text-sm py-1 px-2 w-48">
+                <option value="">选择项目...</option>
+                <option v-for="project in projects" :key="project.id" :value="project.id">
+                  {{ project.name }}
+                </option>
+              </select>
+            </div>
+            <div class="flex items-center gap-2">
+              <label class="text-xs text-slate-500">类型:</label>
+              <select v-model="batchWorkTypeId" class="text-sm py-1 px-2 w-48">
+                <option value="">选择类型...</option>
+                <option v-for="wt in workTypes" :key="wt.id" :value="wt.id">
+                  {{ wt.name }}
+                </option>
+              </select>
+            </div>
+            <button
+              @click="applyBatchSettings"
+              :disabled="!batchProjectId && !batchWorkTypeId"
+              class="text-xs px-3 py-1.5 rounded border border-blue-500/30 text-blue-400 hover:bg-blue-500/10 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              应用到全部
+            </button>
+            <button
+              @click="refreshDataFromServer"
+              class="text-xs px-3 py-1.5 rounded border border-green-500/30 text-green-400 hover:bg-green-500/10 transition-colors"
+            >
+              刷新列表
+            </button>
+          </div>
+
+          <!-- 工时表格 -->
+          <div class="overflow-x-auto">
+            <table class="w-full text-sm">
+              <thead>
+                <tr class="border-b border-slate-700">
+                  <th class="text-center py-2 px-3 text-xs font-medium text-slate-500 w-12"></th>
+                  <th class="text-left py-2 px-3 text-xs font-medium text-slate-500 w-12">序号</th>
+                  <th class="text-left py-2 px-3 text-xs font-medium text-slate-500 w-28">时间段</th>
+                  <th class="text-left py-2 px-3 text-xs font-medium text-slate-500">所属项目</th>
+                  <th class="text-center py-2 px-3 text-xs font-medium text-slate-500 w-24">工时(h)</th>
+                  <th class="text-left py-2 px-3 text-xs font-medium text-slate-500 w-48">工作类型</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr
+                  v-for="(entry, index) in entries"
+                  :key="entry.id"
+                  class="border-b border-slate-800 hover:bg-slate-800/50 transition-colors"
+                  :class="{ 'opacity-40': !entry.enabled }"
+                >
+                  <td class="py-2 px-3 text-center">
+                    <button
+                      @click="toggleEntry(index)"
+                      class="transition-colors"
+                      :class="entry.enabled ? 'text-blue-400 hover:text-blue-300' : 'text-slate-600 hover:text-slate-500'"
+                    >
+                      <!-- 眼睛图标（启用） -->
+                      <svg v-if="entry.enabled" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
+                      </svg>
+                      <!-- 眼睛关闭图标（禁用） -->
+                      <svg v-else class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21"/>
+                      </svg>
+                    </button>
+                  </td>
+                  <td class="py-2 px-3 text-slate-500">{{ index + 1 }}</td>
+                  <td class="py-2 px-3">
+                    <select v-model="entry.time_slot_id" class="w-full text-sm py-1 px-2" :disabled="!entry.enabled">
+                      <option v-for="slot in timeSlots" :key="slot.id" :value="slot.id">
+                        {{ slot.name }}
+                      </option>
+                    </select>
+                  </td>
+                  <td class="py-2 px-3">
+                    <select v-model="entry.project_id" class="w-full text-sm py-1 px-2" :disabled="!entry.enabled" @change="onProjectChange(entry)">
+                      <option v-for="project in projects" :key="project.id" :value="project.id">
+                        {{ project.name }}
+                      </option>
+                    </select>
+                  </td>
+                  <td class="py-2 px-3">
+                    <input v-model="entry.hours" type="number" min="0.5" max="8" step="0.5" class="w-full text-sm py-1 px-2 text-center" :disabled="!entry.enabled" />
+                  </td>
+                  <td class="py-2 px-3">
+                    <select v-model="entry.work_type_id" class="w-full text-sm py-1 px-2" :disabled="!entry.enabled" @change="onWorkTypeChange(entry)">
+                      <option v-for="wt in workTypes" :key="wt.id" :value="wt.id">
+                        {{ wt.name }}
+                      </option>
+                    </select>
+                  </td>
+                </tr>
+              </tbody>
+              <tfoot>
+                <tr class="border-t border-slate-700">
+                  <td colspan="4" class="py-2 px-3 text-right text-xs text-slate-500">合计 (启用: {{ enabledCount }})</td>
+                  <td class="py-2 px-3 text-center text-sm font-medium text-blue-400">{{ totalHours }}</td>
+                  <td></td>
+                </tr>
+              </tfoot>
+            </table>
+          </div>
+
+        </div>
+      </div>
+      </div>
+
+      <!-- 固定在底部的提交按钮 -->
+      <div class="shrink-0 border-t border-slate-700 bg-slate-900 p-4">
+        <div class="flex items-center justify-between">
+          <div class="text-sm text-slate-400">
+            共 <span class="text-white font-medium">{{ enabledCount }}</span> 个时段，
+            合计 <span class="text-blue-400 font-medium">{{ totalHours }}</span> 小时
+          </div>
+          <button
+            @click="submitWorkhourHandler"
+            :disabled="submitting"
+            class="btn-primary"
+          >
+            <span v-if="submitting" class="flex items-center gap-2">
+              <svg class="animate-spin w-4 h-4" fill="none" viewBox="0 0 24 24">
+                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+              </svg>
+              提交中...
+            </span>
+            <span v-else>提交工时</span>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 右侧：日志区域 -->
+    <div class="w-80 border-l border-slate-800 bg-slate-900/50 flex flex-col shrink-0">
+      <div class="p-4 border-b border-slate-800">
+        <h2 class="text-sm font-semibold text-slate-300 flex items-center gap-2">
+          <svg class="w-4 h-4 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+          </svg>
+          操作日志
+        </h2>
+      </div>
+      <div class="flex-1 overflow-auto p-4 space-y-1">
+        <div
+          v-for="(log, index) in logs"
+          :key="index"
+          class="log-item"
+          :class="log.type"
+        >
+          {{ log.message }}
+        </div>
+        <div v-if="!logs.length" class="text-xs text-slate-600 text-center py-8">
+          暂无日志
+        </div>
+      </div>
+    </div>
+
+  </main>
+
+</div>
+
+<script>
+  // ============================================================
+  // 双模式 API 适配层（Tauri IPC + HTTP API）
+  // ============================================================
+  function isTauri() {
+    return typeof window !== 'undefined' && ('__TAURI_INTERNALS__' in window || '__TAURI__' in window);
+  }
+  async function tauriInvoke(cmd, args) {
+    const invoke = window.__TAURI_INTERNALS__.invoke;
+    return await invoke(cmd, args);
+  }
+  const HTTP_API_BASE = 'http://localhost:8000';
+  async function httpGet(endpoint) {
+    const res = await fetch(HTTP_API_BASE + endpoint);
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    return await res.json();
+  }
+  async function httpPost(endpoint, data) {
+    const res = await fetch(HTTP_API_BASE + endpoint, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data),
+    });
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    return await res.json();
+  }
+  async function apiValidateEteamsid(eteamsid) {
+    if (isTauri()) return tauriInvoke('validate_eteamsid', { eteamsid });
+    return httpPost('/api/validate-eteamsid', { eteamsid });
+  }
+  async function apiGetProjects() {
+    if (isTauri()) return tauriInvoke('get_projects');
+    return httpGet('/api/projects');
+  }
+  async function apiGetWorkTypes() {
+    if (isTauri()) return tauriInvoke('get_work_types');
+    return httpGet('/api/work-types');
+  }
+  async function apiGetTimeSlots() {
+    if (isTauri()) return tauriInvoke('get_time_slots');
+    return httpGet('/api/time-slots');
+  }
+  async function apiSubmitWorkhour(data) {
+    if (isTauri()) return tauriInvoke('submit_workhour', data);
+    return httpPost('/api/submit-workhour', data);
+  }
+
+  const { createApp, ref, computed, onMounted, watch } = Vue;
+
+  const app = createApp({
+    setup() {
+    // 状态
+    const eteamsid = ref('');
+    const eteamsidValid = ref(false);
+    const eteamsidError = ref('');
+    const validating = ref(false);
+    const employeeId = ref('1190305333855765126');
+    const employeeName = ref('胡金涛');
+
+    const workDate = ref(new Date().toISOString().split('T')[0]);
+    const entries = ref([]);
+    const submitting = ref(false);
+    const logs = ref([]);
+
+    // Notification
+    const notification = ref({ show: false, type: 'info', message: '' });
+    let notificationTimer = null;
+
+    function showNotification(type, message, duration = 3000) {
+      if (notificationTimer) clearTimeout(notificationTimer);
+      notification.value = { show: true, type, message };
+      notificationTimer = setTimeout(() => {
+        notification.value.show = false;
+      }, duration);
+    }
+
+    // 批量设置
+    const batchProjectId = ref('');
+    const batchWorkTypeId = ref('');
+
+    // 从 localStorage 加载批量设置默认值
+    const savedBatchProject = localStorage.getItem('batchProjectId');
+    const savedBatchWorkType = localStorage.getItem('batchWorkTypeId');
+    if (savedBatchProject) batchProjectId.value = savedBatchProject;
+    if (savedBatchWorkType) batchWorkTypeId.value = savedBatchWorkType;
+
+    // 保存表单数据到 localStorage
+    function saveFormData() {
+      localStorage.setItem('workDate', workDate.value);
+      localStorage.setItem('entries', JSON.stringify(entries.value));
+      localStorage.setItem('batchProjectId', batchProjectId.value);
+      localStorage.setItem('batchWorkTypeId', batchWorkTypeId.value);
+    }
+
+    // 从 localStorage 加载表单数据
+    function loadFormData() {
+      const savedWorkDate = localStorage.getItem('workDate');
+      const savedEntries = localStorage.getItem('entries');
+
+      if (savedWorkDate) {
+        workDate.value = savedWorkDate;
+      }
+      if (savedEntries) {
+        try {
+          entries.value = JSON.parse(savedEntries);
+        } catch (e) {
+          console.error('加载表单数据失败:', e);
+        }
+      }
+    }
+
+    // 监听数据变化，自动保存
+    watch([workDate, entries, batchProjectId, batchWorkTypeId], () => {
+      saveFormData();
+    }, { deep: true });
+
+    // 数据列表
+    const projects = ref([]);
+    const workTypes = ref([]);
+    const timeSlots = ref([]);
+
+    // 计算属性
+    const totalHours = computed(() => {
+      return entries.value
+        .filter(e => e.enabled)
+        .reduce((sum, e) => sum + parseFloat(e.hours || 0), 0)
+        .toFixed(1);
+    });
+
+    const enabledCount = computed(() => {
+      return entries.value.filter(e => e.enabled).length;
+    });
+
+    // 初始化
+    onMounted(async () => {
+      // 修改日期选择器图标颜色
+      setTimeout(() => {
+        const dateInputs = document.querySelectorAll('input[type="date"]');
+        dateInputs.forEach(input => {
+          input.style.colorScheme = 'dark';
+        });
+      }, 100);
+
+      // 加载数据列表
+      try {
+        const [projectsData, workTypesData, timeSlotsData] = await Promise.all([
+          apiGetProjects(),
+          apiGetWorkTypes(),
+          apiGetTimeSlots(),
+        ]);
+        projects.value = projectsData.projects;
+        workTypes.value = workTypesData.work_types;
+        timeSlots.value = timeSlotsData.time_slots;
+      } catch (e) {
+        console.error('加载数据失败:', e);
+      }
+
+      // 从 localStorage 加载表单数据
+      loadFormData();
+
+      // 如果没有保存的条目，创建默认4个
+      if (entries.value.length === 0) {
+        for (let i = 0; i < 4; i++) {
+          addEntry();
+        }
+      }
+
+      // 从 localStorage 加载保存的配置
+      const savedEteamsid = localStorage.getItem('eteamsid');
+      const savedEmployeeId = localStorage.getItem('employeeId');
+      const savedEmployeeName = localStorage.getItem('employeeName');
+
+      if (savedEteamsid) {
+        eteamsid.value = savedEteamsid;
+        if (savedEmployeeId) employeeId.value = savedEmployeeId;
+        if (savedEmployeeName) employeeName.value = savedEmployeeName;
+        validateEteamsidHandler();
+      }
+    });
+
+    // 方法
+    function addLog(message, type = 'info') {
+      const time = new Date().toLocaleTimeString('zh-CN');
+      logs.value.unshift({ message: `[${time}] ${message}`, type });
+      if (logs.value.length > 50) logs.value.pop();
+    }
+
+    async function validateEteamsidHandler() {
+      if (!eteamsid.value) return;
+
+      validating.value = true;
+      eteamsidError.value = '';
+      addLog('正在验证 eteamsid...');
+
+      try {
+        const data = await apiValidateEteamsid(eteamsid.value);
+
+        if (data.valid) {
+          eteamsidValid.value = true;
+          employeeId.value = data.employee_id || '1190305333855765126';
+          employeeName.value = data.employee_name || '胡金涛';
+
+          // 保存到 localStorage
+          localStorage.setItem('eteamsid', eteamsid.value);
+          localStorage.setItem('employeeId', employeeId.value);
+          localStorage.setItem('employeeName', employeeName.value);
+          addLog(`验证成功! 员工: ${employeeName.value}`, 'success');
+          showNotification('success', `验证成功! 员工: ${employeeName.value}`);
+
+          // 从服务器动态获取项目列表和工作类型列表
+          await refreshDataFromServer();
+        } else {
+          eteamsidValid.value = false;
+          eteamsidError.value = data.message;
+          addLog(`验证失败: ${data.message}`, 'error');
+          showNotification('error', `验证失败: ${data.message}`);
+        }
+      } catch (e) {
+        eteamsidValid.value = false;
+        eteamsidError.value = e.message;
+        addLog(`验证出错: ${e.message}`, 'error');
+        showNotification('error', `验证出错: ${e.message}`);
+      } finally {
+        validating.value = false;
+      }
+    }
+
+    async function refreshDataFromServer() {
+      // 从服务器获取项目列表
+      try {
+        addLog('正在从服务器获取项目列表...');
+        const projectsData = await apiGetProjects();
+        if (projectsData.projects && projectsData.projects.length > 0) {
+          projects.value = projectsData.projects;
+          addLog(`项目列表已更新: ${projects.value.length} 个项目`, 'success');
+        }
+      } catch (e) {
+        console.error('获取项目列表失败:', e);
+        addLog('获取项目列表失败', 'error');
+      }
+
+      // 从服务器获取工作类型列表
+      try {
+        addLog('正在从服务器获取工作类型列表...');
+        const workTypesData = await apiGetWorkTypes();
+        if (workTypesData.work_types && workTypesData.work_types.length > 0) {
+          workTypes.value = workTypesData.work_types;
+          addLog(`工作类型列表已更新: ${workTypes.value.length} 个类型`, 'success');
+        }
+      } catch (e) {
+        console.error('获取工作类型列表失败:', e);
+        addLog('获取工作类型列表失败', 'error');
+      }
+    }
+
+    let entryIdCounter = 0;
+    function addEntry() {
+      const defaultProject = projects.value[0] || { id: '1209221362068406318', name: 'GS690电液伺服开发' };
+      const defaultWorkType = workTypes.value[0] || { id: '1249968996533993500', name: '软件工具链研究与应用' };
+
+      // 选择下一个可用的时间段
+      const usedSlotIds = entries.value.map(e => e.time_slot_id);
+      const availableSlot = timeSlots.value.find(s => !usedSlotIds.includes(s.id));
+      const defaultSlot = availableSlot || timeSlots.value[0];
+
+      entries.value.push({
+        id: ++entryIdCounter,
+        time_slot_id: defaultSlot?.id || String(entryIdCounter - 1),
+        project_id: defaultProject.id,
+        project_name: defaultProject.name,
+        hours: '2.0',
+        work_type_id: defaultWorkType.id,
+        work_type_name: defaultWorkType.name,
+        enabled: true,
+      });
+    }
+
+    function toggleEntry(index) {
+      entries.value[index].enabled = !entries.value[index].enabled;
+    }
+
+    function onProjectChange(entry) {
+      const project = projects.value.find(p => p.id === entry.project_id);
+      if (project) entry.project_name = project.name;
+    }
+
+    function onWorkTypeChange(entry) {
+      const wt = workTypes.value.find(w => w.id === entry.work_type_id);
+      if (wt) entry.work_type_name = wt.name;
+    }
+
+    function applyBatchSettings() {
+      if (!batchProjectId.value && !batchWorkTypeId.value) return;
+
+      entries.value.forEach(entry => {
+        if (batchProjectId.value) {
+          const project = projects.value.find(p => p.id === batchProjectId.value);
+          if (project) {
+            entry.project_id = project.id;
+            entry.project_name = project.name;
+          }
+        }
+        if (batchWorkTypeId.value) {
+          const wt = workTypes.value.find(w => w.id === batchWorkTypeId.value);
+          if (wt) {
+            entry.work_type_id = wt.id;
+            entry.work_type_name = wt.name;
+          }
+        }
+      });
+
+      addLog(`批量设置已应用到 ${entries.value.length} 个时段`, 'success');
+
+      // 保存到 localStorage
+      if (batchProjectId.value) {
+        localStorage.setItem('batchProjectId', batchProjectId.value);
+      }
+      if (batchWorkTypeId.value) {
+        localStorage.setItem('batchWorkTypeId', batchWorkTypeId.value);
+      }
+    }
+
+    function setToday() {
+      workDate.value = new Date().toISOString().split('T')[0];
+    }
+
+    function setYesterday() {
+      const d = new Date();
+      d.setDate(d.getDate() - 1);
+      workDate.value = d.toISOString().split('T')[0];
+    }
+
+    function setLastWorkday() {
+      const d = new Date();
+      do {
+        d.setDate(d.getDate() - 1);
+      } while (d.getDay() === 0 || d.getDay() === 6);
+      workDate.value = d.toISOString().split('T')[0];
+    }
+
+    async function submitWorkhourHandler() {
+      if (!eteamsidValid.value) {
+        addLog('请先验证 eteamsid', 'error');
+        return;
+      }
+
+      if (!workDate.value) {
+        addLog('请选择填报日期', 'error');
+        return;
+      }
+
+      if (entries.value.length === 0) {
+        addLog('请添加至少一个工时条目', 'error');
+        return;
+      }
+
+      submitting.value = true;
+      const enabledEntries = entries.value.filter(e => e.enabled);
+      addLog(`开始提交工时: ${workDate.value}, 共 ${enabledEntries.length} 个时段`);
+
+      try {
+        const data = await apiSubmitWorkhour({
+          eteamsid: eteamsid.value,
+          work_date: workDate.value,
+          entries: enabledEntries.map(e => ({
+            time_slot_id: e.time_slot_id,
+            project_id: e.project_id,
+            project_name: e.project_name,
+            hours: e.hours,
+            work_type_id: e.work_type_id,
+            work_type_name: e.work_type_name,
+          })),
+          employee_id: employeeId.value,
+          employee_name: employeeName.value,
+        });
+
+        if (data.success) {
+          addLog(`提交成功! ${data.result_message || ''}`, 'success');
+          showNotification('success', '工时填报成功!');
+        } else {
+          addLog(`提交失败: ${data.message}`, 'error');
+          showNotification('error', `提交失败: ${data.message}`);
+        }
+      } catch (e) {
+        const msg = e.message;
+        addLog(`提交出错: ${msg}`, 'error');
+        showNotification('error', `提交出错: ${msg}`);
+      } finally {
+        submitting.value = false;
+      }
+    }
+
+    return {
+      eteamsid,
+      eteamsidValid,
+      eteamsidError,
+      validating,
+      employeeName,
+      workDate,
+      entries,
+      submitting,
+      logs,
+      notification,
+      projects,
+      workTypes,
+      timeSlots,
+      totalHours,
+      enabledCount,
+      batchProjectId,
+      batchWorkTypeId,
+      validateEteamsidHandler,
+      refreshDataFromServer,
+      addEntry,
+      toggleEntry,
+      onProjectChange,
+      onWorkTypeChange,
+      applyBatchSettings,
+      setToday,
+      setYesterday,
+      setLastWorkday,
+      submitWorkhourHandler,
+      showNotification,
+    };
+  },
+});
+
+app.mount('#app');
+</script>
+
+</body>
+</html>
