@@ -18,6 +18,9 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v5
 
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+
       - name: Install Rust
         uses: dtolnay/rust-toolchain@stable
 
@@ -26,17 +29,14 @@ jobs:
         with:
           workspaces: ./src-tauri -> target
 
-      - name: Install Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20'
+      - name: Install frontend dependencies
+        run: bun install
 
       - name: Install Tauri CLI
-        run: npm install -g @tauri-apps/cli
+        run: bun add -g @tauri-apps/cli
 
       - name: Build Tauri app
-        run: cargo tauri build
-        working-directory: ./src-tauri
+        run: tauri build
 
       - name: Upload exe to GitHub Artifacts
         if: success()
