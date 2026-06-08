@@ -1,0 +1,18 @@
+[package]
+name = "workhour-frontend"
+version = "0.1.0"
+edition = "2021"
+description = "工时填报系统"
+
+[dependencies]
+eworkhour = { path = "../eworkhour" }
+tauri = { version = "2", features = ["tray-icon", "devtools"] }
+tauri-plugin-window-state = "2"
+tauri-plugin-single-instance = "2"
+tauri-plugin-log = "2"
+log.workspace = true
+dirs = "5"
+serde_json.workspace = true
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }

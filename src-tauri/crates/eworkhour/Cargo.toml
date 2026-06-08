@@ -1,0 +1,15 @@
+[package]
+name = "eworkhour"
+version = "0.1.0"
+edition = "2021"
+description = "工时系统 API 客户端库"
+
+[dependencies]
+log.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+reqwest.workspace = true
+tokio.workspace = true
+chrono.workspace = true
+rand.workspace = true
+dirs = "5"

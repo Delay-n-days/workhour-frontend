@@ -1,7 +1,7 @@
 //! Tauri 命令层
 //! 暴露给前端 invoke() 调用的函数，对应工时系统 API
 
-use crate::eworkhour::{EworkhourClient, WorkHourEntry};
+use eworkhour::{EworkhourClient, WorkHourEntry};
 use log::{info, error};
 
 /// 验证 eteamsid

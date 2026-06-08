@@ -1,3 +1,6 @@
+#![recursion_limit = "256"]
+//! 工时系统 API 客户端库
+
 use reqwest::Client;
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
@@ -48,13 +51,14 @@ pub struct SubmitResponse {
     pub record_id: Option<String>,
 }
 
-impl EworkhourClient {
+impl EworkhourClient { 
     /// 创建新的客户端实例
     pub fn new() -> Self {
         Self {
             client: Client::builder()
                 .danger_accept_invalid_certs(true)
                 .timeout(std::time::Duration::from_secs(30))
+                .gzip(true)
                 .build()
                 .unwrap(),
             base_url: "http://202.105.113.101:20600".to_string(),
@@ -70,10 +74,15 @@ impl EworkhourClient {
         eteamsid: &str,
     ) -> Result<Value, reqwest::Error> {
         let url = format!("{}{}", self.base_url, path);
+        debug!("[HTTP] {} {}", method, url);
+
         let referer = format!("{}/", self.base_url);
         let mut headers = HashMap::new();
         headers.insert("Accept", "application/json, text/plain, */*");
+        headers.insert("Accept-Encoding", "gzip, deflate");
+        headers.insert("Accept-Language", "zh-CN,zh;q=0.9");
         headers.insert("Content-Type", "application/json;charset=UTF-8");
+        headers.insert("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/149.0.0.0 Safari/537.36 Edg/149.0.0.0");
         headers.insert("eteamsid", eteamsid);
         headers.insert("langType", "zh_CN");
         headers.insert("timeZoneOffset", "-480");
@@ -96,7 +105,25 @@ impl EworkhourClient {
             request.send().await?
         };
 
-        response.json().await
+        let status = response.status();
+        debug!("[HTTP] 响应状态: {}", status);
+
+        if !status.is_success() {
+            let text = response.text().await.unwrap_or_default();
+            error!("[HTTP] 请求失败: status={}, body={}", status, &text[..text.len().min(500)]);
+            return Ok(json!({"status": false, "msg": format!("HTTP {}: {}", status, &text[..text.len().min(200)])}));
+        }
+
+        let text = response.text().await.unwrap_or_default();
+        debug!("[HTTP] 响应内容: {}", &text[..text.len().min(500)]);
+
+        match serde_json::from_str::<Value>(&text) {
+            Ok(v) => Ok(v),
+            Err(e) => {
+                error!("[HTTP] JSON 解析失败: {}, 原始内容: {}", e, &text[..text.len().min(200)]);
+                Ok(json!({"status": false, "msg": format!("JSON 解析失败: {}", e)}))
+            }
+        }
     }
 
     /// 验证 eteamsid
@@ -115,6 +142,7 @@ impl EworkhourClient {
         });
 
         let data = self.make_request("POST", "/api/workflow/core/flowPage/loadBaseParam", &body, eteamsid).await?;
+        debug!("[API] loadBaseParam 响应: {:?}", data);
 
         if data.get("status") == Some(&Value::Bool(false)) {
             let error_msg = data.get("msg").and_then(|v| v.as_str()).unwrap_or("eteamsid 无效或已过期");
@@ -154,6 +182,16 @@ impl EworkhourClient {
         info!("[API] 开始获取项目列表...");
         debug!("[API] 请求参数: eteamsid='{}'", eteamsid);
 
+        let form_param = json!({
+            "formId": FORM_ID,
+            "layoutId": FORM_LAYOUT_ID,
+            "fieldId": "1215162323950796801",
+            "filterItems": [],
+            "module": "ebuildercard",
+            "dataDetails": []
+        });
+        let form_param_str = serde_json::to_string(&form_param).unwrap_or_default();
+
         let body = json!({
             "browserMultiple": false,
             "ebBrowserParams": {
@@ -161,14 +199,7 @@ impl EworkhourClient {
                 "variableDataKeyMap": {},
                 "businessId": WORKFLOW_ID,
                 "browserModule": "ebuilder",
-                "formParam": json!({
-                    "formId": FORM_ID,
-                    "layoutId": FORM_LAYOUT_ID,
-                    "fieldId": "1215162323950796801",
-                    "filterItems": [],
-                    "module": "ebuildercard",
-                    "dataDetails": []
-                }),
+                "formParam": form_param_str.clone(),
                 "controlId": "1215162323950796801",
                 "variableMap": {},
                 "browserFullRoute": "ebuilder/form",
@@ -208,14 +239,7 @@ impl EworkhourClient {
             },
             "pageSize": 100,
             "current": 1,
-            "formParam": json!({
-                "formId": FORM_ID,
-                "layoutId": FORM_LAYOUT_ID,
-                "fieldId": "1215162323950796801",
-                "filterItems": [],
-                "module": "ebuildercard",
-                "dataDetails": []
-            }),
+            "formParam": form_param_str,
             "openScroll": true,
             "controlId": "1215162323950796801",
             "businessId": WORKFLOW_ID,
@@ -247,6 +271,7 @@ impl EworkhourClient {
         });
 
         let data = self.make_request("POST", "/api/ebuilder/form/common/browser/data/ebuilder", &body, eteamsid).await?;
+        debug!("[API] get_projects 响应: {:?}", &data.to_string()[..data.to_string().len().min(500)]);
 
         if data.get("status") == Some(&Value::Bool(false)) {
             let error_msg = data.get("msg").and_then(|v| v.as_str()).unwrap_or("未知错误");
@@ -276,6 +301,16 @@ impl EworkhourClient {
         info!("[API] 开始获取工作类型列表...");
         debug!("[API] 请求参数: eteamsid='{}'", eteamsid);
 
+        let form_param = json!({
+            "formId": FORM_ID,
+            "layoutId": FORM_LAYOUT_ID,
+            "fieldId": FIELD_WORK_TYPE,
+            "filterItems": [],
+            "module": "ebuildercard",
+            "dataDetails": []
+        });
+        let form_param_str = serde_json::to_string(&form_param).unwrap_or_default();
+
         let body = json!({
             "browserMultiple": true,
             "ebBrowserParams": {
@@ -283,14 +318,7 @@ impl EworkhourClient {
                 "variableDataKeyMap": {},
                 "businessId": WORKFLOW_ID,
                 "browserModule": "ebuilder",
-                "formParam": json!({
-                    "formId": FORM_ID,
-                    "layoutId": FORM_LAYOUT_ID,
-                    "fieldId": FIELD_WORK_TYPE,
-                    "filterItems": [],
-                    "module": "ebuildercard",
-                    "dataDetails": []
-                }),
+                "formParam": form_param_str.clone(),
                 "controlId": FIELD_WORK_TYPE,
                 "variableMap": {},
                 "browserFullRoute": "ebuilder/form",
@@ -330,14 +358,7 @@ impl EworkhourClient {
             },
             "pageSize": 50,
             "current": 1,
-            "formParam": json!({
-                "formId": FORM_ID,
-                "layoutId": FORM_LAYOUT_ID,
-                "fieldId": FIELD_WORK_TYPE,
-                "filterItems": [],
-                "module": "ebuildercard",
-                "dataDetails": []
-            }),
+            "formParam": form_param_str,
             "openScroll": true,
             "controlId": FIELD_WORK_TYPE,
             "businessId": WORKFLOW_ID,
@@ -369,6 +390,7 @@ impl EworkhourClient {
         });
 
         let data = self.make_request("POST", "/api/ebuilder/form/common/browser/data/ebuilder", &body, eteamsid).await?;
+        debug!("[API] get_work_types 响应: {:?}", &data.to_string()[..data.to_string().len().min(500)]);
 
         if data.get("status") == Some(&Value::Bool(false)) {
             let error_msg = data.get("msg").and_then(|v| v.as_str()).unwrap_or("未知错误");
@@ -418,7 +440,6 @@ impl EworkhourClient {
         info!("[API] 工作日期: {}, 条目数: {}, 员工: {}", work_date, entries.len(), employee_name);
         debug!("[API] eteamsid='{}', employee_id='{}'", eteamsid, employee_id);
 
-        // 常量
         let workflow_id = "1215170926745124864";
         let node_id = "1215170926745124866";
         let form_id = "1215162010367852547";

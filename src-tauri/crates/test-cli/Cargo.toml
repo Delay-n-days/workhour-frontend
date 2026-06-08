@@ -1,0 +1,12 @@
+[package]
+name = "test-cli"
+version = "0.1.0"
+edition = "2021"
+description = "工时系统 API 测试工具"
+
+[dependencies]
+eworkhour = { path = "../eworkhour" }
+tokio.workspace = true
+serde_json.workspace = true
+log = "0.4"
+env_logger = "0.11"

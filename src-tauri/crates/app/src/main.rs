@@ -3,11 +3,18 @@
 //! 工时填报系统 - Tauri 主入口
 
 mod commands;
-mod eworkhour;
 
 use tauri::Manager;
 
 fn main() {
+    // 在启动前先打印日志目录
+    let log_dir = dirs::data_local_dir()
+        .map(|d| d.join("com.workhour.frontend").join("logs"))
+        .unwrap_or_default();
+    println!("========================================");
+    println!("工时填报系统 - 日志目录: {:?}", log_dir);
+    println!("========================================");
+
     tauri::Builder::default()
         .plugin(tauri_plugin_single_instance::init(|app, _args, _cwd| {
             // 用户尝试开第二个实例时，把已有窗口拉到前台
@@ -17,7 +24,7 @@ fn main() {
                 .set_focus();
         }))
         .plugin(tauri_plugin_window_state::Builder::default().build())
-        // 添加日志插件 - 日志保存在应用目录下的 logs 文件夹
+        // 添加日志插件 - 日志保存在 AppData/Local/com.workhour.frontend/logs/
         .plugin(
             tauri_plugin_log::Builder::new()
                 .level(log::LevelFilter::Info)  // 日志级别: Error, Warn, Info, Debug, Trace

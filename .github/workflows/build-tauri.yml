@@ -36,6 +36,7 @@ jobs:
         run: bun add -g @tauri-apps/cli
 
       - name: Build Tauri app
+        working-directory: ./src-tauri/crates/app
         run: tauri build
 
       - name: Upload exe to GitHub Artifacts
