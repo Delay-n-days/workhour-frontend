@@ -658,10 +658,12 @@
           showNotification('error', `验证失败: ${data.message}`);
         }
       } catch (e) {
+        console.error('验证 eteamsid 错误:', e);
+        const msg = typeof e === 'string' ? e : (e.message || e.msg || JSON.stringify(e));
         eteamsidValid.value = false;
-        eteamsidError.value = e.message;
-        addLog(`验证出错: ${e.message}`, 'error');
-        showNotification('error', `验证出错: ${e.message}`);
+        eteamsidError.value = msg;
+        addLog(`验证出错: ${msg}`, 'error');
+        showNotification('error', `验证出错: ${msg}`);
       } finally {
         validating.value = false;
       }
@@ -806,7 +808,22 @@
       addLog(`开始提交工时: ${workDate.value}, 共 ${enabledEntries.length} 个时段`);
 
       try {
-        const data = await apiSubmitWorkhour({
+        // Tauri 2 自动转 camelCase，需要匹配 Rust 参数名
+        const tauriData = {
+          eteamsid: eteamsid.value,
+          workDate: workDate.value,
+          entries: enabledEntries.map(e => ({
+            timeSlotId: e.time_slot_id,
+            projectId: e.project_id,
+            projectName: e.project_name,
+            hours: e.hours,
+            workTypeId: e.work_type_id,
+            workTypeName: e.work_type_name,
+          })),
+          employeeId: employeeId.value,
+          employeeName: employeeName.value,
+        };
+        const httpData = {
           eteamsid: eteamsid.value,
           work_date: workDate.value,
           entries: enabledEntries.map(e => ({
@@ -819,7 +836,11 @@
           })),
           employee_id: employeeId.value,
           employee_name: employeeName.value,
-        });
+        };
+        const useTauri = checkIsTauri();
+        const data = useTauri
+          ? await tauriInvoke('submit_workhour', tauriData)
+          : await httpPost('/api/submit-workhour', httpData);
 
         if (data.success) {
           addLog(`提交成功! ${data.result_message || ''}`, 'success');
@@ -829,7 +850,8 @@
           showNotification('error', `提交失败: ${data.message}`);
         }
       } catch (e) {
-        const msg = e.message;
+        console.error('提交工时错误:', e);
+        const msg = typeof e === 'string' ? e : (e.message || e.msg || JSON.stringify(e));
         addLog(`提交出错: ${msg}`, 'error');
         showNotification('error', `提交出错: ${msg}`);
       } finally {

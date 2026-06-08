@@ -23,6 +23,7 @@ pub struct EworkhourClient {
 
 /// 验证响应
 #[derive(Debug, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct ValidateResponse {
     pub valid: bool,
     pub employee_id: Option<String>,
@@ -32,6 +33,7 @@ pub struct ValidateResponse {
 
 /// 工时条目
 #[derive(Debug, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct WorkHourEntry {
     pub time_slot_id: String,
     pub project_id: String,
@@ -43,6 +45,7 @@ pub struct WorkHourEntry {
 
 /// 提交响应
 #[derive(Debug, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct SubmitResponse {
     pub success: bool,
     pub message: String,
@@ -151,7 +154,7 @@ impl EworkhourClient {
                 valid: false,
                 employee_id: None,
                 employee_name: None,
-                message: Some(error_msg.to_string()),
+                message: Some(error_msg.to_string()), 
             });
         }
 
