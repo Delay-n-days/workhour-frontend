@@ -61,6 +61,7 @@ impl EworkhourClient {
         eteamsid: &str,
     ) -> Result<Value, reqwest::Error> {
         let url = format!("{}{}", self.base_url, path);
+        let referer = format!("{}/", self.base_url);
         let mut headers = HashMap::new();
         headers.insert("Accept", "application/json, text/plain, */*");
         headers.insert("Content-Type", "application/json;charset=UTF-8");
@@ -68,7 +69,7 @@ impl EworkhourClient {
         headers.insert("langType", "zh_CN");
         headers.insert("timeZoneOffset", "-480");
         headers.insert("Origin", &self.base_url);
-        headers.insert("Referer", &format!("{}/", self.base_url));
+        headers.insert("Referer", &referer);
 
         let mut request = if method_upper(method) {
             self.client.post(&url)
