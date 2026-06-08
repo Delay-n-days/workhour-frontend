@@ -478,11 +478,11 @@
   }
   async function apiGetProjects(eteamsid) {
     if (checkIsTauri()) return tauriInvoke('get_projects', { eteamsid });
-    return httpGet('/api/projects');
+    return httpPost('/api/projects/search', { eteamsid });
   }
   async function apiGetWorkTypes(eteamsid) {
     if (checkIsTauri()) return tauriInvoke('get_work_types', { eteamsid });
-    return httpGet('/api/work-types');
+    return httpPost('/api/work-types/search', { eteamsid });
   }
   async function apiGetTimeSlots() {
     if (checkIsTauri()) return tauriInvoke('get_time_slots');

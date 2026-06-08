@@ -2,22 +2,23 @@
 //! 暴露给前端 invoke() 调用的函数，对应工时系统 API
 
 use crate::eworkhour::{EworkhourClient, WorkHourEntry};
+use log::{info, error};
 
 /// 验证 eteamsid
 #[tauri::command]
 pub async fn validate_eteamsid(eteamsid: String) -> Result<serde_json::Value, String> {
-    eprintln!("[CMD] validate_eteamsid: eteamsid='{}'", eteamsid);
+    info!("[CMD] validate_eteamsid: eteamsid='{}'", eteamsid);
 
     let client = EworkhourClient::new();
     let result = client.validate_eteamsid(&eteamsid)
         .await
         .map_err(|e| {
             let msg = format!("验证失败: {}", e);
-            eprintln!("[CMD] validate_eteamsid ERROR: {}", msg);
+            error!("[CMD] validate_eteamsid ERROR: {}", msg);
             msg
         })?;
 
-    eprintln!("[CMD] validate_eteamsid: valid={}, employee_id={:?}, employee_name={:?}",
+    info!("[CMD] validate_eteamsid: valid={}, employee_id={:?}, employee_name={:?}",
         result.valid, result.employee_id, result.employee_name);
 
     Ok(serde_json::json!({
@@ -31,54 +32,54 @@ pub async fn validate_eteamsid(eteamsid: String) -> Result<serde_json::Value, St
 /// 获取项目列表（动态）
 #[tauri::command]
 pub async fn get_projects(eteamsid: String) -> Result<serde_json::Value, String> {
-    eprintln!("[CMD] get_projects: eteamsid='{}'", eteamsid);
+    info!("[CMD] get_projects: eteamsid='{}'", eteamsid);
 
     let client = EworkhourClient::new();
     let result = client.get_projects(&eteamsid)
         .await
         .map_err(|e| {
             let msg = format!("获取项目列表失败: {}", e);
-            eprintln!("[CMD] get_projects ERROR: {}", msg);
+            error!("[CMD] get_projects ERROR: {}", msg);
             msg
         })?;
 
-    eprintln!("[CMD] get_projects: 成功");
+    info!("[CMD] get_projects: 成功");
     Ok(result)
 }
 
 /// 获取工作类型列表（动态）
 #[tauri::command]
 pub async fn get_work_types(eteamsid: String) -> Result<serde_json::Value, String> {
-    eprintln!("[CMD] get_work_types: eteamsid='{}'", eteamsid);
+    info!("[CMD] get_work_types: eteamsid='{}'", eteamsid);
 
     let client = EworkhourClient::new();
     let result = client.get_work_types(&eteamsid)
         .await
         .map_err(|e| {
             let msg = format!("获取工作类型失败: {}", e);
-            eprintln!("[CMD] get_work_types ERROR: {}", msg);
+            error!("[CMD] get_work_types ERROR: {}", msg);
             msg
         })?;
 
-    eprintln!("[CMD] get_work_types: 成功");
+    info!("[CMD] get_work_types: 成功");
     Ok(result)
 }
 
 /// 获取时间段列表
 #[tauri::command]
 pub async fn get_time_slots() -> Result<serde_json::Value, String> {
-    eprintln!("[CMD] get_time_slots");
+    info!("[CMD] get_time_slots");
 
     let client = EworkhourClient::new();
     let result = client.get_time_slots()
         .await
         .map_err(|e| {
             let msg = format!("获取时间段失败: {}", e);
-            eprintln!("[CMD] get_time_slots ERROR: {}", msg);
+            error!("[CMD] get_time_slots ERROR: {}", msg);
             msg
         })?;
 
-    eprintln!("[CMD] get_time_slots: 成功");
+    info!("[CMD] get_time_slots: 成功");
     Ok(result)
 }
 
@@ -91,7 +92,7 @@ pub async fn submit_workhour(
     employee_id: String,
     employee_name: String,
 ) -> Result<serde_json::Value, String> {
-    eprintln!("[CMD] submit_workhour: eteamsid='{}', work_date='{}', entries={}, employee_id='{}', employee_name='{}'",
+    info!("[CMD] submit_workhour: eteamsid='{}', work_date='{}', entries={}, employee_id='{}', employee_name='{}'",
         eteamsid, work_date, entries.len(), employee_id, employee_name);
 
     let client = EworkhourClient::new();
@@ -99,11 +100,11 @@ pub async fn submit_workhour(
         .await
         .map_err(|e| {
             let msg = format!("提交工时失败: {}", e);
-            eprintln!("[CMD] submit_workhour ERROR: {}", msg);
+            error!("[CMD] submit_workhour ERROR: {}", msg);
             msg
         })?;
 
-    eprintln!("[CMD] submit_workhour: success={}, message='{}'", result.success, result.message);
+    info!("[CMD] submit_workhour: success={}, message='{}'", result.success, result.message);
 
     Ok(serde_json::json!({
         "success": result.success,

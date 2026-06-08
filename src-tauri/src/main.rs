@@ -17,6 +17,15 @@ fn main() {
                 .set_focus();
         }))
         .plugin(tauri_plugin_window_state::Builder::default().build())
+        // 添加日志插件 - 日志保存在应用目录下的 logs 文件夹
+        .plugin(
+            tauri_plugin_log::Builder::new()
+                .level(log::LevelFilter::Info)  // 日志级别: Error, Warn, Info, Debug, Trace
+                .max_file_size(5_000_000)       // 单个日志文件最大 5MB
+                .rotation_strategy(tauri_plugin_log::RotationStrategy::KeepAll)  // 保留所有日志文件
+                .timezone_strategy(tauri_plugin_log::TimestampStrategy::UseLocal)  // 使用本地时间
+                .build()
+        )
         .invoke_handler(tauri::generate_handler![
             commands::validate_eteamsid,
             commands::get_projects,
@@ -30,6 +39,11 @@ fn main() {
                 let window = app.get_webview_window("main").unwrap();
                 window.open_devtools();
             }
+
+            // 打印日志目录路径
+            let log_dir = app.path().app_log_dir().unwrap_or_default();
+            log::info!("应用启动，日志目录: {:?}", log_dir);
+
             Ok(())
         })
         .run(tauri::generate_context!())

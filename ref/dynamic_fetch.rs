@@ -1,8 +1,12 @@
+// ============================================================
+// 动态获取项目和工作类型 - 参考实现
+// ============================================================
+// 将以下代码合并到 src-tauri/src/eworkhour.rs 中
+
 use reqwest::Client;
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
 use std::collections::HashMap;
-use log::{info, error, debug};
 
 // 流程 / 表单固定 ID
 const WORKFLOW_ID: &str = "1215170926745124864";
@@ -101,15 +105,12 @@ impl EworkhourClient {
 
     /// 验证 eteamsid
     pub async fn validate_eteamsid(&self, eteamsid: &str) -> Result<ValidateResponse, reqwest::Error> {
-        info!("[API] 开始验证 eteamsid...");
-        debug!("[API] eteamsid='{}'", eteamsid);
-
         let body = json!({
-            "cusMenuId": "1192823941250891835",
+            "cusMenuId": CUS_MENU_ID,
             "urlPageTitle": "5a6e6ZmF5bel5pe2",
             "isCreate": 1,
-            "workflowId": "1215170926745124864",
-            "id": "1215170926745124864",
+            "workflowId": WORKFLOW_ID,
+            "id": WORKFLOW_ID,
             "fieldAssignKeys": "",
             "jumplinkParamKey": "SubmitApplication",
         });
@@ -117,13 +118,11 @@ impl EworkhourClient {
         let data = self.make_request("POST", "/api/workflow/core/flowPage/loadBaseParam", &body, eteamsid).await?;
 
         if data.get("status") == Some(&Value::Bool(false)) {
-            let error_msg = data.get("msg").and_then(|v| v.as_str()).unwrap_or("eteamsid 无效或已过期");
-            error!("[API] eteamsid 验证失败: {}", error_msg);
             return Ok(ValidateResponse {
                 valid: false,
                 employee_id: None,
                 employee_name: None,
-                message: Some(error_msg.to_string()),
+                message: Some(data.get("msg").and_then(|v| v.as_str()).unwrap_or("eteamsid 无效或已过期").to_string()),
             });
         }
 
@@ -139,8 +138,6 @@ impl EworkhourClient {
             .and_then(|v| v.as_str())
             .map(|s| s.to_string());
 
-        info!("[API] eteamsid 验证成功: employee_id={:?}, employee_name={:?}", employee_id, employee_name);
-
         Ok(ValidateResponse {
             valid: true,
             employee_id,
@@ -151,9 +148,6 @@ impl EworkhourClient {
 
     /// 获取项目列表（动态）
     pub async fn get_projects(&self, eteamsid: &str) -> Result<Value, reqwest::Error> {
-        info!("[API] 开始获取项目列表...");
-        debug!("[API] 请求参数: eteamsid='{}'", eteamsid);
-
         let body = json!({
             "browserMultiple": false,
             "ebBrowserParams": {
@@ -249,9 +243,7 @@ impl EworkhourClient {
         let data = self.make_request("POST", "/api/ebuilder/form/common/browser/data/ebuilder", &body, eteamsid).await?;
 
         if data.get("status") == Some(&Value::Bool(false)) {
-            let error_msg = data.get("msg").and_then(|v| v.as_str()).unwrap_or("未知错误");
-            error!("[API] 获取项目列表失败: {}", error_msg);
-            return Ok(json!({"projects": [], "source": "static", "error": error_msg}));
+            return Ok(json!({"projects": [], "source": "static", "error": data.get("msg")}));
         }
 
         let projects = data.get("data")
@@ -267,15 +259,11 @@ impl EworkhourClient {
             })
             .unwrap_or_default();
 
-        info!("[API] 获取项目列表成功: 共 {} 个项目", projects.len());
         Ok(json!({"projects": projects, "source": "server"}))
     }
 
     /// 获取工作类型列表（动态）
     pub async fn get_work_types(&self, eteamsid: &str) -> Result<Value, reqwest::Error> {
-        info!("[API] 开始获取工作类型列表...");
-        debug!("[API] 请求参数: eteamsid='{}'", eteamsid);
-
         let body = json!({
             "browserMultiple": true,
             "ebBrowserParams": {
@@ -371,9 +359,7 @@ impl EworkhourClient {
         let data = self.make_request("POST", "/api/ebuilder/form/common/browser/data/ebuilder", &body, eteamsid).await?;
 
         if data.get("status") == Some(&Value::Bool(false)) {
-            let error_msg = data.get("msg").and_then(|v| v.as_str()).unwrap_or("未知错误");
-            error!("[API] 获取工作类型列表失败: {}", error_msg);
-            return Ok(json!({"work_types": [], "source": "static", "error": error_msg}));
+            return Ok(json!({"work_types": [], "source": "static", "error": data.get("msg")}));
         }
 
         let work_types = data.get("data")
@@ -389,7 +375,6 @@ impl EworkhourClient {
             })
             .unwrap_or_default();
 
-        info!("[API] 获取工作类型列表成功: 共 {} 种类型", work_types.len());
         Ok(json!({"work_types": work_types, "source": "server"}))
     }
 
@@ -414,22 +399,17 @@ impl EworkhourClient {
         employee_id: &str,
         employee_name: &str,
     ) -> Result<SubmitResponse, reqwest::Error> {
-        info!("[API] 开始提交工时...");
-        info!("[API] 工作日期: {}, 条目数: {}, 员工: {}", work_date, entries.len(), employee_name);
-        debug!("[API] eteamsid='{}', employee_id='{}'", eteamsid, employee_id);
-
         // 常量
-        let workflow_id = "1215170926745124864";
-        let node_id = "1215170926745124866";
-        let form_id = "1215162010367852547";
-        let form_layout_id = "1215162010367852618";
+        let workflow_id = WORKFLOW_ID;
+        let node_id = NODE_ID;
+        let form_id = FORM_ID;
+        let form_layout_id = FORM_LAYOUT_ID;
         let permission_id = "1215170943857885185";
         let app_id = "1020021532740116481";
-        let cus_menu_id = "1192823941250891835";
+        let cus_menu_id = CUS_MENU_ID;
         let sub_form_id = "1215162130668879876";
 
         // Step 1: 初始化流程
-        info!("[API] Step 1: 初始化流程...");
         let body = json!({
             "cusMenuId": cus_menu_id,
             "urlPageTitle": "5a6e6ZmF5bel5pe2",
@@ -443,11 +423,9 @@ impl EworkhourClient {
         let data = self.make_request("POST", "/api/workflow/core/flowPage/loadBaseParam", &body, eteamsid).await?;
 
         if data.get("status") == Some(&Value::Bool(false)) {
-            let error_msg = data.get("msg").and_then(|v| v.as_str()).unwrap_or("loadBaseParam 失败");
-            error!("[API] Step 1 失败: {}", error_msg);
             return Ok(SubmitResponse {
                 success: false,
-                message: error_msg.to_string(),
+                message: data.get("msg").and_then(|v| v.as_str()).unwrap_or("loadBaseParam 失败").to_string(),
                 request_name: None,
                 result_message: None,
                 record_id: None,
@@ -458,10 +436,8 @@ impl EworkhourClient {
         let auth_str = data["data"]["commonParam"]["authStr"].as_str().unwrap_or("");
         let auth_sig = data["data"]["commonParam"]["authSignatureStr"].as_str().unwrap_or("");
         let page_key = format!("CreateDialog_{}_{}", workflow_id, chrono::Utc::now().timestamp_millis());
-        info!("[API] Step 1 完成: requestId={}", request_id);
 
         // Step 2: 保存表单数据
-        info!("[API] Step 2: 保存表单数据...");
         let mut data_details = vec![
             json!({"formField": {"id": "1217668209634082818"}, "content": work_date}),
             json!({"formField": {"id": "1215162130668879873"}, "dataOptions": [{"optionId": employee_id, "content": employee_name}]}),
@@ -517,10 +493,8 @@ impl EworkhourClient {
         });
 
         let _data = self.make_request("POST", &format!("/api/ebuilder/flow/form/core/saveFormData?formId={}", form_id), &body, eteamsid).await?;
-        info!("[API] Step 2 完成: 表单数据已保存");
 
         // Step 3: 创建流程草稿
-        info!("[API] Step 3: 创建流程草稿...");
         let body = json!({
             "cusMenuId": cus_menu_id,
             "urlPageTitle": "5a6e6ZmF5bel5pe2",
@@ -597,11 +571,9 @@ impl EworkhourClient {
         let data = self.make_request("POST", "/api/workflow/core/flow/create", &body, eteamsid).await?;
 
         if data.get("status") == Some(&Value::Bool(false)) {
-            let error_msg = data.get("msg").and_then(|v| v.as_str()).unwrap_or("flow/create 失败");
-            error!("[API] Step 3 失败: {}", error_msg);
             return Ok(SubmitResponse {
                 success: false,
-                message: error_msg.to_string(),
+                message: data.get("msg").and_then(|v| v.as_str()).unwrap_or("flow/create 失败").to_string(),
                 request_name: None,
                 result_message: None,
                 record_id: None,
@@ -609,10 +581,8 @@ impl EworkhourClient {
         }
 
         let record_id = data.get("recordId").and_then(|v| v.as_str()).map(|s| s.to_string());
-        info!("[API] Step 3 完成: recordId={:?}", record_id);
 
         // Step 4: 正式提交
-        info!("[API] Step 4: 正式提交...");
         let body = json!({
             "operResultType": "SUCCESS_RELOAD_CURRENT_PAGE",
             "requestId": request_id,
@@ -665,18 +635,15 @@ impl EworkhourClient {
         let data = self.make_request("POST", &format!("/api/workflow/core/flow/submit?requestId={}", request_id), &body, eteamsid).await?;
 
         if data.get("status") == Some(&Value::Bool(false)) {
-            let error_msg = data.get("msg").and_then(|v| v.as_str()).unwrap_or("flow/submit 失败");
-            error!("[API] Step 4 失败: {}", error_msg);
             return Ok(SubmitResponse {
                 success: false,
-                message: error_msg.to_string(),
+                message: data.get("msg").and_then(|v| v.as_str()).unwrap_or("flow/submit 失败").to_string(),
                 request_name: None,
                 result_message: None,
                 record_id: None,
             });
         }
 
-        info!("[API] 工时提交成功!");
         Ok(SubmitResponse {
             success: true,
             message: "工时填报成功".to_string(),
